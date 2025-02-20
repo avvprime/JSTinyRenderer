@@ -14,12 +14,19 @@ let canvasHeight = 600;
 
 let frameId = 0;
 
+
 function swap(a, b)
 {
     a = a + b;
     b = a - b;
     a = a - b;
     return [a, b];
+}
+
+function getDeterminant(a, b, c){
+  const ab = {x: b.x - a.x, y: b.y - a.y};
+  const ac = {x: c.x - a.x, y: c.y - a.y};
+  return ab.y * ac.x - ab.x * ac.y 
 }
 
 function setPixel(x, y, r, g, b, a, imageData){
@@ -66,6 +73,25 @@ function drawLine(x0, y0, x1, y1, r, g, b, a, imageData){
     }
 }
 
+function drawFace(v0, v1, v2, r, g, b, a, imageData){
+  const xmin = Math.min(v0.x, v1.x, v2.x);
+  const ymin = Math.min(v0.y, v1.y, v2.y);
+
+  const xmax = Math.max(v0.x, v1.x, v2.x);
+  const ymax = Math.max(v0.y, v1.y, v2.y);
+
+  for (let y = ymin; y <= ymax; y++){
+    for (let x = xmin; x <= xmax; x++){
+      const p = {x: x, y: y}
+
+      const w0 = getDeterminant(v1, v2, p);
+      const w1 = getDeterminant(v2, v0, p);
+      const w2 = getDeterminant(v0, v1, p);
+
+      if (w0 >= 0 && w1 >= 0 && w2 >= 0) setPixel(x, y, r, g, b, a, imageData);
+    }
+  }
+}
 
 function draw(elapsedTimeInMillis){
     frameId = requestAnimationFrame(draw);
@@ -79,6 +105,8 @@ function draw(elapsedTimeInMillis){
 
     console.log("drawing started");
     
+    /*
+    // Wireframe Drawing
     for (let i = 0; i < model.models[0].faces.length; i++)
     {
       const face = model.models[0].faces[i];
@@ -97,6 +125,27 @@ function draw(elapsedTimeInMillis){
         drawLine(x0, canvasHeight + y0 * -1, x1, canvasHeight + y1 * -1, 255, 255, 255, 255, imageData.data);
       }
     }
+    */
+
+    const faces = model.models[0].faces;
+    const vertices = model.models[0].vertices;
+
+    for (let i = 0; i < faces.length; i++){
+      const face = faces[i];
+      const screenCoords = [];
+      for (let j = 0; j < 3; j++) {
+        const worldCoord = vertices[face.vertices[j].vertexIndex - 1];
+        const screenCoord = {
+          x: Math.round((worldCoord.x + 1) * (canvasWidth / 2)),
+          y: Math.round(canvasHeight + (((worldCoord.y + 1) * (canvasHeight / 2)) * -1))
+        };
+        screenCoords[j] = screenCoord;
+      }
+
+      drawFace(screenCoords[0], screenCoords[1], screenCoords[2], 255, 255, 255, 255, imageData.data)
+    }
+
+    
 
     ctx.putImageData(imageData, 0, 0);
     console.log("drawing ended");
