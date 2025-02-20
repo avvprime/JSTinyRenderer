@@ -23,6 +23,11 @@ function swap(a, b)
     return [a, b];
 }
 
+function normalizeVec3(v){
+  const length = Math.sqrt(v.x * v.y * v.z);
+  return {x: v.x / length, y: v.y / length, z: v.z / length}
+}
+
 function getDeterminant(a, b, c){
   const ab = {x: b.x - a.x, y: b.y - a.y};
   const ac = {x: c.x - a.x, y: c.y - a.y};
@@ -129,10 +134,12 @@ function draw(elapsedTimeInMillis){
 
     const faces = model.models[0].faces;
     const vertices = model.models[0].vertices;
+    const lightDir = {x: 0, y: 0.1, z: 1};
 
     for (let i = 0; i < faces.length; i++){
       const face = faces[i];
       const screenCoords = [];
+      const worldCoords = [];
       for (let j = 0; j < 3; j++) {
         const worldCoord = vertices[face.vertices[j].vertexIndex - 1];
         const screenCoord = {
@@ -140,9 +147,20 @@ function draw(elapsedTimeInMillis){
           y: Math.round(canvasHeight + (((worldCoord.y + 1) * (canvasHeight / 2)) * -1))
         };
         screenCoords[j] = screenCoord;
+        worldCoords[j] = worldCoord;
       }
-
-      drawFace(screenCoords[0], screenCoords[1], screenCoords[2], 255, 255, 255, 255, imageData.data)
+      const U = {x: worldCoords[1].x - worldCoords[0].x, y: worldCoords[1].y - worldCoords[0].y, z: worldCoords[1].z - worldCoords[0].z};
+      const V = {x: worldCoords[2].x - worldCoords[1].x, y: worldCoords[2].y - worldCoords[1]. y, z: worldCoords[2].z - worldCoords[1].z};
+      const surfaceNormal = {
+        x: U.y * V.z - U.z * V.y,
+        y: U.z * V.x - U.x * V.z,
+        z: U.x * V.y - U.y * V.x
+      };
+      const normalizedSurfaceNormal = normalizeVec3(surfaceNormal);
+      const intensity = normalizedSurfaceNormal.x * lightDir.x + normalizedSurfaceNormal.y * lightDir.y + normalizedSurfaceNormal.z * lightDir.z; 
+      
+      if (intensity > 0) 
+        drawFace(screenCoords[0], screenCoords[1], screenCoords[2], intensity * 255, intensity * 255, intensity * 255, 255, imageData.data)
     }
 
     
